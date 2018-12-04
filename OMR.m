@@ -1,5 +1,11 @@
 clc;
-path = 'img/im1s.jpg';
+
+% Define some parameters
+path = 'img/im1s.jpg';     % Path to image being processed
+angleSpan = 5;              % Minimum/maximum image rotation to correct
+angleDelta = 0.05;          % Image rotation correction step size
+
+
 % Load and invert the image
 RGB = imcomplement(imread(path));
 % Get the pixel width, height and number of channels
@@ -11,7 +17,7 @@ thres = graythresh(gray);
 % Binarize the image
 BW = imbinarize(gray, thres);
 % Calculate the Hough transform of the image
-[H, T, R] = hough(BW, 'Theta', -5:0.1:5);
+[H, T, R] = hough(BW, 'Theta', -angleSpan:angleDelta:angleSpan);
 
 % Get the strongest line
 % First column is rho index, second is theta index
@@ -46,6 +52,18 @@ for row = staffRows
     plot([1, width], [row+rowHeight/2 row+rowHeight/2], 'yellow');
     plot([1, width], [row-rowHeight/2 row-rowHeight/2], 'yellow');
 end
+
+% Get profile of a debug note
+note_x = 100;
+note_y = 185;
+[staffRow, key] = NoteProfile(note_y, staffRows, rowHeight);
+
+% Plot line
+plot([note_x, note_x], [staffRows(staffRow) note_y], 'red');
+% Plot note
+plot(note_x, note_y,'r*');
+%text(note_x, note_y, 'A', 'HorizontalAlignment','center', 'VerticalAlignment','middle');
+
 hold off
 
 %%
