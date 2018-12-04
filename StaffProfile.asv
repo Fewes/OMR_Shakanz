@@ -1,0 +1,35 @@
+function [staffLines] = StaffProfile(BW)
+%STAFFPROFILE Set up the staff lines profile to be used for note
+%classification
+
+% Dilation filter
+s = ones(3:3);
+% Dilate the image
+BW = imdilate(BW, s);
+
+% Calculate the mean value of each row
+staffLines = mean(BW');
+% Threshold the result to find stafflines only
+% After this operation, stafflines are stored in a vertical vector
+staffLines = imbinarize(staffLines', 0.5);
+
+% Dilate staff lines to get a solid block for each row
+s = ones(10:10);
+staffLines = imdilate(staffLines, s);
+
+b = false;
+startPos = 0;
+rowPos = 1;
+% Find staff line rows
+for i=1:length(staffLines)
+  %elm = staffLines(i);
+    if stafflines(i) && ~b
+        startPos = i;
+        b = true;
+    elseif ~staffLines(u) && b
+        rows(rowPos) = (startPos + i) / 2;
+        rowPos=rowPos+1;
+        b = false;
+    end
+end
+
