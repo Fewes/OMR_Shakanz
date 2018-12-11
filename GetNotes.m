@@ -1,4 +1,4 @@
-function [notes] = GetNotes(BW)
+function [notes, NotePosMat] = GetNotes(BW)
 
 
 s1 = [0 0 1 0 0; 0 1 1 1 0; 1 1 1 1 1; 0 1 1 1 0 ; 0 0 1 0 0];
@@ -10,6 +10,12 @@ imshow(BW);
 
 L = bwlabel(BWithoutlines);
 BoundingBoxes = regionprops(L, 'BoundingBox');
+notes = BoundingBoxes;
+CoF = regionprops(L, 'Centroid');
+notePositions = extractfield(CoF, 'Centroid');
+notePosX = notePositions(1:2:end)';
+notePosY = notePositions(2:2:end)';
+NotePosMat = [notePosX, notePosY];
 
 for k = 1 : length(BoundingBoxes)
   thisBB = BoundingBoxes(k).BoundingBox;
