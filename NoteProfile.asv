@@ -1,4 +1,4 @@
-function [staffRow, key] = NoteProfile(hookMap, x, y, staffRows, rowHeight)
+function [staffRow, key] = NoteProfile(hookMap, y, staffRows, rowHeight)
     %NOTEPROFILE Get note profile (parent row and key)
     
     % Key indexing array
@@ -45,8 +45,6 @@ function [staffRow, key] = NoteProfile(hookMap, x, y, staffRows, rowHeight)
 %         "d4"
 %         "e4"
        ];
-   
-    noteWidth = 5;
     
     % ----- Determine which staff row this note belongs to -----
     % Track the previous index
@@ -94,9 +92,14 @@ function [staffRow, key] = NoteProfile(hookMap, x, y, staffRows, rowHeight)
         key = keys(keyIndex);
         
         % Determine note type
-        if hookMap(round(y), round(x - noteWidth)) || hookMap(round(y), round(x + noteWidth))
-            key = lower(key);
-        end
+        % Isolate the part of the hookMap we're interested in
+        top = round(staffRow - rowHeight * 1.5);
+        bot = round(staffRow + rowHeight * 1.5);
+        hookMap(1:top, :) = 0;
+        hookMap(bot:length(hookMap), :) = 0;
+        % Project the hook map vertically
+        proj = mean(hookMap) > 0;
+        proj()
     else
         key = string(missing);
     end

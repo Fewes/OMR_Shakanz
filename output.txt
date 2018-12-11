@@ -1,0 +1,4 @@
+d2 C2 F2 A2 F2 b2 a2 g2 f2 E2 G2 C2 E2 g2 a2 c3 e3 c3 a2 g2 e2 f2 g2 d2 g2 b2 d3 b2 g3 d3 b2 d3 b2 g2 
+d2 C2 F2 A2 F2 b2 a2 g2 f2 E2 G2 C2 E2 G2 a2 d3 f3 c3 e3 a2 c3 e3 c3 d3 f3 a2 d3 f3 d3 
+d2 A2 a2 a2 A2 A2 B2 a2 a2 G2 g2 g2 G2 f2 f2 E2 F2 e3 c3 d3 f3 a2 d3 f3 d3 e3 g3 b3 g3 e3 c3 D3 
+d2 A2 a2 a2 A2 A2 B2 A2 G2 G2 F2 E2 
