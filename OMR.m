@@ -1,10 +1,11 @@
 clc;
 
 % Define some parameters
-path = 'img/im1s.jpg';     % Path to image being processed
-angleSpan = 5;              % Minimum/maximum image rotation to correct
-angleDelta = 0.05;          % Image rotation correction step size
-
+path            = 'img/im3s.jpg';   % Path to image being processed
+angleSpan       = 5;                % Minimum/maximum image rotation to correct
+angleDelta      = 0.05;             % Image rotation correction step size
+showStaffRanges = true;             % Toggle debug drawing of staff ranges
+showNotes       = true;             % Toggle debug drawing of notes
 
 % Load and invert the image
 RGB = imcomplement(imread(path));
@@ -27,7 +28,7 @@ thetaPeak = T(P(1, 2));
 
 % Straighten the ORIGINAL image
 RGB = imrotate(RGB, thetaPeak, 'bicubic');
-imshow(RGB);
+% imshow(RGB);
 
 % Convert to grayscale
 gray = rgb2gray(RGB);
@@ -40,23 +41,40 @@ BW = imbinarize(gray, thres);
 [staffLines, staffRows, rowHeight] = StaffProfile(BW);
 
 % Stretch the result and show it
-imshow(repmat(staffLines, 1, width));
+% imshow(repmat(staffLines, 1, width));
 
 % Show staff row ranges
 imshow(BW);
+imshow(ones(height, width));
 hold on
-for row = staffRows
-    % Row center
-    plot([1, width], [row row], 'green');
-    % Row edges
-    plot([1, width], [row+rowHeight/2 row+rowHeight/2], 'yellow');
-    plot([1, width], [row-rowHeight/2 row-rowHeight/2], 'yellow');
+if showStaffRanges == true
+    for row = staffRows
+        % Row center
+        plot([1, width], [row row], 'black');
+        % Row edges
+        plot([1, width], [row+rowHeight/2 row+rowHeight/2], 'black');
+        plot([1, width], [row+rowHeight/4 row+rowHeight/4], 'black');
+        plot([1, width], [row-rowHeight/2 row-rowHeight/2], 'black');
+        plot([1, width], [row-rowHeight/4 row-rowHeight/4], 'black');
+    end
 end
 
-% Get profile of a debug note
-note_x = 100;
-note_y = 185;
+% Morphological filter matrix used to detect notes
+% How accurate the note detection is depends on how well
+% this filter matches the shape of the notes on the sheet
 
+noteShape = [
+    0 0 1 1 1 0 0;
+    0 1 1 1 1 1 0
+    1 1 1 1 1 1 1
+    1 1 1 1 1 1 1
+    1 1 1 1 1 1 1
+    0 1 1 1 1 1 0
+    0 0 1 1 1 0 0];
+
+% Identify and get the notes from the black-and-white image
+[notesBB, notes] = GetNotes(BW, noteShape);
+%
 % Notes are stored in a row matrix, like this:
 % [x, y] % Note 1
 % [x, y] % Note 2
@@ -64,15 +82,6 @@ note_y = 185;
 % [x, y] % Note 4
 % ...
 % They are sorted based on their x-coordinates
-
-notes = rand(32, 2);
-notes(:, 2) = notes(:, 2) * height;
-notes(:, 1) = notes(:, 1) * width;
-
-% 3D Matrix containing the notes on each staff row
-keys = zeros(2, 1, length(staffRows));
-
-keys(:, 4, 2) = ones(2, 1);
 
 indices = ones(1, length(staffRows));
 
@@ -84,53 +93,21 @@ for row=1:size(notes,1)
     % Get the note profile
     [staffRow, key] = NoteProfile(y, staffRows, rowHeight);
     
-    keys(:, indices(1, staffRow), staffRow) = [x y];
-    indices(1, staffRow) = indices(1, staffRow)+1;
+    if ~ismissing(key)
+        % Set the key
+        keys(:, indices(1, staffRow), staffRow) = key;
+        % Increment index for the current staff row
+        indices(1, staffRow) = indices(1, staffRow)+1;
 
-    % Plot line
-    plot([x, x], [staffRows(staffRow) y], 'red');
-    % Plot note
-    plot(x, y, 'r*');
+        if showNotes == true
+            % Plot line
+            % plot([x, x], [staffRows(staffRow) y], 'red');
+            % Plot note
+            plot(x, y, 'ko', 'MarkerFaceColor', 'k');
+        end
+        
+        text(x, staffRows(staffRow) - rowHeight, key, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom');
+    end
 end
-
-% for row=1:size(notes,1)
-%     % Get the note profile
-%     [staffRow, key] = NoteProfile(notes(row, 2), staffRows, rowHeight);
-% 
-%     % Plot line
-%     plot([note_x, note_x], [staffRows(staffRow) note_y], 'red');
-%     % Plot note
-%     plot(note_x, note_y,'r*');
-% end
 
 hold off
-
-%%
-
-imshow(H,[],'XData',T,'YData',R,...
-            'InitialMagnification','fit');
-xlabel('\theta'), ylabel('\rho');
-axis on, axis normal, hold on;
-
-P  = houghpeaks(H,5,'threshold',ceil(0.3*max(H(:))));
-x = T(P(:,2)); y = R(P(:,1));
-plot(x,y,'s','color','white');
-
-lines = houghlines(BW,T,R,P,'FillGap',5,'MinLength',7);
-figure, imshow(RGB), hold on
-max_len = 0;
-for k = 1:length(lines)
-   xy = [lines(k).point1; lines(k).point2];
-   plot(xy(:,1),xy(:,2),'LineWidth',2,'Color','green');
-
-   % Plot beginnings and ends of lines
-   plot(xy(1,1),xy(1,2),'x','LineWidth',2,'Color','yellow');
-   plot(xy(2,1),xy(2,2),'x','LineWidth',2,'Color','red');
-
-   % Determine the endpoints of the longest line segment
-   len = norm(lines(k).point1 - lines(k).point2);
-   if ( len > max_len)
-      max_len = len;
-      xy_long = xy;
-   end
-end

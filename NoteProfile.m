@@ -24,26 +24,26 @@ function [staffRow, key] = NoteProfile(y, staffRows, rowHeight)
         "D4"
         "E4"
         
-        "g1"
-        "a1"
-        "b1"
-        "c2"
-        "d2"
-        "e2"
-        "f2"
-        "g2"
-        "a2"
-        "b2"
-        "c3"
-        "d3"
-        "e3"
-        "f3"
-        "g3"
-        "a3"
-        "b3"
-        "c4"
-        "d4"
-        "e4"
+%         "g1"
+%         "a1"
+%         "b1"
+%         "c2"
+%         "d2"
+%         "e2"
+%         "f2"
+%         "g2"
+%         "a2"
+%         "b2"
+%         "c3"
+%         "d3"
+%         "e3"
+%         "f3"
+%         "g3"
+%         "a3"
+%         "b3"
+%         "c4"
+%         "d4"
+%         "e4"
        ];
     
     % ----- Determine which staff row this note belongs to -----
@@ -91,7 +91,7 @@ function [staffRow, key] = NoteProfile(y, staffRows, rowHeight)
     if keyIndex > 0 && keyIndex < length(keys)
         key = keys(keyIndex);
     else
-        key = "NOTE_OUT_OF_RANGE";
+        key = string(missing);
     end
     
     %key
