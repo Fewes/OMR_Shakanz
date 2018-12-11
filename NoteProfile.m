@@ -71,7 +71,7 @@ function [staffRow, key] = NoteProfile(y, staffRows, rowHeight)
             break
         elseif i == length(staffRows)
             % Reached the end, assume the note belongs to the bottom row
-            staffRow = length(staffRows)
+            staffRow = length(staffRows);
         end
         prevIndex = i;
     end
@@ -88,8 +88,12 @@ function [staffRow, key] = NoteProfile(y, staffRows, rowHeight)
     % Move into the correct range (1-40)
     keyIndex = keyIndex + 9 + 1;
     % Use the key array to set the key string
-    key = keys(keyIndex);
+    if keyIndex > 0 && keyIndex < length(keys)
+        key = keys(keyIndex);
+    else
+        key = "NOTE_OUT_OF_RANGE";
+    end
     
-    key
+    %key
 end
 

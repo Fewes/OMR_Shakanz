@@ -56,13 +56,52 @@ end
 % Get profile of a debug note
 note_x = 100;
 note_y = 185;
-[staffRow, key] = NoteProfile(note_y, staffRows, rowHeight);
 
-% Plot line
-plot([note_x, note_x], [staffRows(staffRow) note_y], 'red');
-% Plot note
-plot(note_x, note_y,'r*');
-%text(note_x, note_y, 'A', 'HorizontalAlignment','center', 'VerticalAlignment','middle');
+% Notes are stored in a row matrix, like this:
+% [x, y] % Note 1
+% [x, y] % Note 2
+% [x, y] % Note 3
+% [x, y] % Note 4
+% ...
+% They are sorted based on their x-coordinates
+
+notes = rand(32, 2);
+notes(:, 2) = notes(:, 2) * height;
+notes(:, 1) = notes(:, 1) * width;
+
+% 3D Matrix containing the notes on each staff row
+keys = zeros(2, 1, length(staffRows));
+
+keys(:, 4, 2) = ones(2, 1);
+
+indices = ones(1, length(staffRows));
+
+for row=1:size(notes,1)
+    % Note coordinates
+    x = notes(row, 1);
+    y = notes(row, 2);
+    
+    % Get the note profile
+    [staffRow, key] = NoteProfile(y, staffRows, rowHeight);
+    
+    keys(:, indices(1, staffRow), staffRow) = [x y];
+    indices(1, staffRow) = indices(1, staffRow)+1;
+
+    % Plot line
+    plot([x, x], [staffRows(staffRow) y], 'red');
+    % Plot note
+    plot(x, y, 'r*');
+end
+
+% for row=1:size(notes,1)
+%     % Get the note profile
+%     [staffRow, key] = NoteProfile(notes(row, 2), staffRows, rowHeight);
+% 
+%     % Plot line
+%     plot([note_x, note_x], [staffRows(staffRow) note_y], 'red');
+%     % Plot note
+%     plot(note_x, note_y,'r*');
+% end
 
 hold off
 
