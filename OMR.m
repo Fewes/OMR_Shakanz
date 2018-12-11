@@ -1,10 +1,10 @@
 clc;
 
 % Define some parameters
-path            = 'img/im3s.jpg';   % Path to image being processed
+path            = 'img/im8s.jpg';   % Path to image being processed
 angleSpan       = 5;                % Minimum/maximum image rotation to correct
 angleDelta      = 0.05;             % Image rotation correction step size
-showStaffRanges = true;             % Toggle debug drawing of staff ranges
+showStaffRanges = false;             % Toggle debug drawing of staff ranges
 showNotes       = true;             % Toggle debug drawing of notes
 
 % Load and invert the image
@@ -28,6 +28,8 @@ thetaPeak = T(P(1, 2));
 
 % Straighten the ORIGINAL image
 RGB = imrotate(RGB, thetaPeak, 'bicubic');
+% Recalculate size
+[height, width, channels] = size(RGB);
 % imshow(RGB);
 
 % Convert to grayscale
@@ -44,20 +46,9 @@ BW = imbinarize(gray, thres);
 % imshow(repmat(staffLines, 1, width));
 
 % Show staff row ranges
-imshow(BW);
-imshow(ones(height, width));
+imshow(~BW);
+%imshow(ones(height, width));
 hold on
-if showStaffRanges == true
-    for row = staffRows
-        % Row center
-        plot([1, width], [row row], 'black');
-        % Row edges
-        plot([1, width], [row+rowHeight/2 row+rowHeight/2], 'black');
-        plot([1, width], [row+rowHeight/4 row+rowHeight/4], 'black');
-        plot([1, width], [row-rowHeight/2 row-rowHeight/2], 'black');
-        plot([1, width], [row-rowHeight/4 row-rowHeight/4], 'black');
-    end
-end
 
 % Morphological filter matrix used to detect notes
 % How accurate the note detection is depends on how well
@@ -85,17 +76,63 @@ noteShape = [
 
 indices = ones(1, length(staffRows));
 
+% Construct the hook map
+% Close small gaps
+hookMap = BW;
+hookMap = imclose(hookMap, ones(2, 2));
+% Remove staff lines
+hookMap = imopen(hookMap, [0 1 0; 0 1 0; 0 1 0]);
+% Find horizontal lines (hooks)
+hookMap = imopen(hookMap, ones(2, 16));
+hookMap = imdilate(hookMap, ones(5, 5));
+
+% Project each hook map row vertically
+for row = staffRows
+    top = round(row - rowHeight * 1.35);
+    bot = round(row + rowHeight * 1.35);
+    proj = hookMap;
+    proj(1:top, :) = 0;
+    proj(bot:length(proj), :) = 0;
+    % Project the hook map vertically
+    proj = mean(proj) > 0;
+    % 
+    proj = repmat(proj', 1, height)';
+    % 
+    hookMap(top:bot, :) = proj(top:bot, :);
+end
+
+% img = ones(height, width, 3);
+% img(:,:,2) = ~hookMap;
+% img(:,:,3) = ~hookMap;
+% 
+% imshow(img);
+%imshow(ones(height, width));
+%hold off
+%
+if showStaffRanges == true
+    for row = staffRows
+        
+        % Row center
+        plot([1, width], [row row], 'black');
+        % Row edges
+        plot([1, width], [row+rowHeight/2 row+rowHeight/2], 'black');
+        plot([1, width], [row+rowHeight/4 row+rowHeight/4], 'black');
+        plot([1, width], [row-rowHeight/2 row-rowHeight/2], 'black');
+        plot([1, width], [row-rowHeight/4 row-rowHeight/4], 'black');
+    end
+end
+
 for row=1:size(notes,1)
     % Note coordinates
     x = notes(row, 1);
     y = notes(row, 2);
     
     % Get the note profile
-    [staffRow, key] = NoteProfile(y, staffRows, rowHeight);
+    [staffRow, key] = NoteProfile(hookMap, x, y, staffRows, rowHeight);
     
     if ~ismissing(key)
         % Set the key
-        keys(:, indices(1, staffRow), staffRow) = key;
+        keys(staffRow, indices(1, staffRow)) = key;
         % Increment index for the current staff row
         indices(1, staffRow) = indices(1, staffRow)+1;
 
@@ -111,3 +148,18 @@ for row=1:size(notes,1)
 end
 
 hold off
+
+% Output to file
+fileID = fopen('output.txt','w');
+
+for row=1:size(keys, 1)
+    for col=1:size(keys, 2)
+        if ~ismissing(keys(row, col))
+            fprintf(fileID, keys(row, col));
+            fprintf(fileID, ' ');
+        end
+    end
+    fprintf(fileID, '\n');
+end
+
+fclose(fileID);
