@@ -1,15 +1,25 @@
-clc;
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+function strout = tnm034(Im)
+%
+% Im: Input image of captured sheet music. Imshould be in 
+% double format, normalized to the interval [0,1]
+%
+% strout: The resulting character string of the detected notes.  
+% The string must follow the pre-defined format, explained below.
+%
 
 % Define some parameters
-path                = 'img/im8s.jpg';   % Path to image being processed
+path                = 'img/im5s.jpg';   % Path to image being processed
 angleSpan           = 5;                % Minimum/maximum image rotation to correct
 angleDelta          = 0.05;             % Image rotation correction step size
-showStaffRanges     = true;             % Toggle debug drawing of staff ranges
-showNotes           = true;             % Toggle debug drawing of notes
+showStaffRanges     = false;            % Toggle debug drawing of staff ranges
+showNotes           = false;            % Toggle debug drawing of notes
+showHookMap         = false;
 underlyingOpacity   = 0.5;              % Show the original sheet music with this opacity
 
 % Load and invert the image
-RGB = imcomplement(imread(path));
+%RGB = imcomplement(imread(path));
+RGB = imcomplement(Im);
 % Get the pixel width, height and number of channels
 [height, width, channels] = size(RGB);
 % Convert to grayscale (also rotate)
@@ -43,21 +53,32 @@ BW = imbinarize(gray, thres);
 % Remove treble clef
 clef = imread('g.png');
 [clefHeight, clefWidth, clefChannels] = size(clef);
+% Normalized cross correlation
 clef = imbinarize(clef(:,:,1));
 C = normxcorr2(clef, BW);
+% Threshold the result
 clefMap = C > 0.3;
+% Vertical projection
 clefMap = mean(clefMap) > 0.002;
+% Shift a bit to the left (the "found" clefs are not centered)
+clefMap = circshift(clefMap,-round(clefWidth/2), 2);
+% Dilate to cover entire clef
 clefMap = imdilate(clefMap, ones(1, clefWidth));
-
-
-found = false;
-for row=1:length(clefMap)
-    if ()
+% Get clef ranges
+found = 0;
+i = 1;
+for col = clefMap
+    if col && found == 0
+        clefStart = i;
+        found = 1;
+    elseif ~col && found == 1
+        clefEnd = i;
+        found = -1;
+    end
+    i = i + 1;
 end
-for 
-
-imshow(clefMap);
-%%
+% Remove all "clef columns" from the black and white image
+BW(:, clefStart:clefEnd) = 0;
 
 % Get the staff line profile
 [staffLines, staffRows, rowHeight] = StaffProfile(BW);
@@ -66,9 +87,9 @@ imshow(clefMap);
 % imshow(repmat(staffLines, 1, width));
 
 % Show staff row ranges
-imshow(~BW);
+%imshow(~BW);
 %imshow(ones(height, width));
-hold on
+%hold on
 
 % Morphological filter matrix used to detect notes
 % How accurate the note detection is depends on how well
@@ -145,14 +166,16 @@ end
 %hookMap = imdilate(hookMap, ones(5, 5));
 
 bg = imcomplement(gray) * (underlyingOpacity) + 255 * (1-underlyingOpacity);
-for row=1:height
-    for col=1:width
-        if hookMap(row, col) == 1
-            bg(row, col, :) = bg(row, col, :) * 0.75;
+if showHookMap
+    for row=1:height
+        for col=1:width
+            if hookMap(row, col) == 1
+                bg(row, col, :) = bg(row, col, :) * 0.75;
+            end
         end
     end
 end
-imshow(bg);
+%imshow(bg);
 %hold off
 %
 if showStaffRanges == true
@@ -187,25 +210,35 @@ for row=1:size(notes,1)
             % plot([x, x], [staffRows(staffRow) y], 'red');
             % Plot note
             plot(x, y, 'ko', 'MarkerFaceColor', 'k');
+            text(x, staffRows(staffRow) - rowHeight, key, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom');
         end
-        
-        text(x, staffRows(staffRow) - rowHeight, key, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom');
     end
 end
 
-hold off
+%hold off
 
-% Output to file
-fileID = fopen('output.txt','w');
-
+% Construct output
+strout = "";
 for row=1:size(keys, 1)
     for col=1:size(keys, 2)
         if ~ismissing(keys(row, col))
-            fprintf(fileID, keys(row, col));
-            fprintf(fileID, ' ');
+            strout = strcat(strout, keys(row, col));
         end
     end
-    fprintf(fileID, '\n');
 end
 
-fclose(fileID);
+% Output to file
+% fileID = fopen('output.txt','w');
+% 
+% for row=1:size(keys, 1)
+%     for col=1:size(keys, 2)
+%         if ~ismissing(keys(row, col))
+%             fprintf(fileID, keys(row, col));
+%             fprintf(fileID, ' ');
+%         end
+%     end
+%     fprintf(fileID, '\n');
+% end
+% 
+% fclose(fileID);
+%%%%%%%%%%%%%%%%%%%%%%%%%%

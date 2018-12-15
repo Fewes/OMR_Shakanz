@@ -1,11 +1,18 @@
 clc;
 
+Im = imread('img/im5s.jpg');
+tnm034(Im)
+
+%%
+
 % Define some parameters
-path            = 'img/im8s.jpg';   % Path to image being processed
-angleSpan       = 5;                % Minimum/maximum image rotation to correct
-angleDelta      = 0.05;             % Image rotation correction step size
-showStaffRanges = false;             % Toggle debug drawing of staff ranges
-showNotes       = true;             % Toggle debug drawing of notes
+path                = 'img/im5s.jpg';   % Path to image being processed
+angleSpan           = 5;                % Minimum/maximum image rotation to correct
+angleDelta          = 0.05;             % Image rotation correction step size
+showStaffRanges     = true;             % Toggle debug drawing of staff ranges
+showNotes           = true;             % Toggle debug drawing of notes
+showHookMap         = false;
+underlyingOpacity   = 0.5;              % Show the original sheet music with this opacity
 
 % Load and invert the image
 RGB = imcomplement(imread(path));
@@ -38,6 +45,36 @@ gray = rgb2gray(RGB);
 thres = graythresh(gray);
 % Binarize the image
 BW = imbinarize(gray, thres);
+
+% Remove treble clef
+clef = imread('g.png');
+[clefHeight, clefWidth, clefChannels] = size(clef);
+% Normalized cross correlation
+clef = imbinarize(clef(:,:,1));
+C = normxcorr2(clef, BW);
+% Threshold the result
+clefMap = C > 0.3;
+% Vertical projection
+clefMap = mean(clefMap) > 0.002;
+% Shift a bit to the left (the "found" clefs are not centered)
+clefMap = circshift(clefMap,-round(clefWidth/2), 2);
+% Dilate to cover entire clef
+clefMap = imdilate(clefMap, ones(1, clefWidth));
+% Get clef ranges
+found = 0;
+i = 1;
+for col = clefMap
+    if col && found == 0
+        clefStart = i;
+        found = 1;
+    elseif ~col && found == 1
+        clefEnd = i;
+        found = -1;
+    end
+    i = i + 1;
+end
+% Remove all "clef columns" from the black and white image
+BW(:, clefStart:clefEnd) = 0;
 
 % Get the staff line profile
 [staffLines, staffRows, rowHeight] = StaffProfile(BW);
@@ -76,20 +113,39 @@ noteShape = [
 
 indices = ones(1, length(staffRows));
 
-% Construct the hook map
-% Close small gaps
-hookMap = BW;
-hookMap = imclose(hookMap, ones(2, 2));
-% Remove staff lines
-hookMap = imopen(hookMap, [0 1 0; 0 1 0; 0 1 0]);
-% Find horizontal lines (hooks)
-hookMap = imopen(hookMap, ones(2, 16));
-hookMap = imdilate(hookMap, ones(5, 5));
+hookMethod2 = true;
+if ~hookMethod2
+    % Construct the hook map
+    % Close small gaps
+    hookMap = BW;
+    hookMap = imclose(hookMap, ones(2, 2));
+    % Remove staff lines
+    hookMap = imopen(hookMap, [0 1 0; 0 1 0; 0 1 0]);
+    % Find horizontal lines (hooks)
+    hookMap = imopen(hookMap, ones(2, 12));
+    hookMap = imdilate(hookMap, ones(5, 5));
+else
+    hookMap = BW;
+    % Close small holes
+    hookMap = imclose(hookMap, ones(2, 2));
+    % Remove staff lines
+    hookMap = imopen(hookMap, [0 1 0; 0 1 0; 0 1 0]);
+    % Remove small elements (often residue from thin lines)
+    hookMap = imopen(hookMap, ones(4, 4));
+    % Remove notes
+    hookMap = hookMap - imdilate(imopen(hookMap, noteShape), ones(5, 5));
+    % Remove vertical lines
+    %hookMap = imopen(hookMap, [0 0 0; 1 1 1; 0 0 0]);
+    % Remove small elements
+    hookMap = imopen(hookMap, ones(2, 2));
+    % Dilate for better note profile accuracy
+    hookMap = imdilate(hookMap, ones(6, 6));
+end
 
 % Project each hook map row vertically
 for row = staffRows
-    top = round(row - rowHeight * 1.35);
-    bot = round(row + rowHeight * 1.35);
+    top = round(row - rowHeight * 1.25);
+    bot = round(row + rowHeight * 1.25);
     proj = hookMap;
     proj(1:top, :) = 0;
     proj(bot:length(proj), :) = 0;
@@ -101,12 +157,21 @@ for row = staffRows
     hookMap(top:bot, :) = proj(top:bot, :);
 end
 
-% img = ones(height, width, 3);
-% img(:,:,2) = ~hookMap;
-% img(:,:,3) = ~hookMap;
-% 
-% imshow(img);
-%imshow(ones(height, width));
+% Find horizontal lines (hooks)
+%hookMap = imopen(hookMap, ones(2, 12));
+%hookMap = imdilate(hookMap, ones(5, 5));
+
+bg = imcomplement(gray) * (underlyingOpacity) + 255 * (1-underlyingOpacity);
+if showHookMap
+    for row=1:height
+        for col=1:width
+            if hookMap(row, col) == 1
+                bg(row, col, :) = bg(row, col, :) * 0.75;
+            end
+        end
+    end
+end
+imshow(bg);
 %hold off
 %
 if showStaffRanges == true
