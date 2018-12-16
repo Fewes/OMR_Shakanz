@@ -219,7 +219,10 @@ end
 
 % Construct output
 strout = "";
-for row=1:size(keys, 1)
+for row=1:size(keys, 1) 
+    if row~=1 && row~=size(keys ,1)
+        strout = strout + 'n';
+    end
     for col=1:size(keys, 2)
         if ~ismissing(keys(row, col))
             strout = strcat(strout, keys(row, col));
